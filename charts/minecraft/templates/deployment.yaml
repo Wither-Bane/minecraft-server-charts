@@ -338,6 +338,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 10 }}
       {{- if and .Values.mcbackup.enabled .Values.minecraftServer.rcon.enabled }}
       - name: {{ template "minecraft.fullname" . }}-mc-backup
+        tty: true
+        stdin: true
         image: "{{ .Values.mcbackup.image.repository }}:{{ .Values.mcbackup.image.tag }}"
         imagePullPolicy: {{ .Values.mcbackup.image.pullPolicy }}
         resources:
@@ -442,6 +444,8 @@ spec:
       initContainers:
         {{- if or (eq .Values.mcbackup.backupMethod "rclone") (eq (include "isResticWithRclone" $) "true") }}
         - name: init-container
+          tty: true
+          stdin: true
           image: busybox
           command: ['sh', '-c', 'cp /secret/rclone.conf /config/rclone/']
           volumeMounts:
