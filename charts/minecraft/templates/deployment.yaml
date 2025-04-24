@@ -1,3 +1,45 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.persistence.storageClass }}
+spec:
+  storageClassName: {{ .Values.persistence.storageClass }}
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  local:
+    path: /data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - minikube
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.mcbackup.persistence.storageClass }}
+spec:
+  storageClassName: {{ .Values.mcbackup.persistence.storageClass }}
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  local:
+    path: /backups
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - minikube
+---
 {{- if ne (printf "%s" .Values.minecraftServer.eula) "FALSE" }}
 apiVersion: apps/v1
 kind: {{ ternary "StatefulSet" "Deployment" .Values.workloadAsStatefulSet }}
@@ -338,6 +380,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 10 }}
       {{- if and .Values.mcbackup.enabled .Values.minecraftServer.rcon.enabled }}
       - name: {{ template "minecraft.fullname" . }}-mc-backup
+        tty: true
+        stdin: true
         image: "{{ .Values.mcbackup.image.repository }}:{{ .Values.mcbackup.image.tag }}"
         imagePullPolicy: {{ .Values.mcbackup.image.pullPolicy }}
         resources:
@@ -442,6 +486,8 @@ spec:
       initContainers:
         {{- if or (eq .Values.mcbackup.backupMethod "rclone") (eq (include "isResticWithRclone" $) "true") }}
         - name: init-container
+          tty: true
+          stdin: true
           image: busybox
           command: ['sh', '-c', 'cp /secret/rclone.conf /config/rclone/']
           volumeMounts:
